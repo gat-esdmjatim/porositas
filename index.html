@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>POROSITAS | Bidang Geologi dan Air Tanah</title>
 <meta name="description" content="POROSITAS - Portal Otomasi Rekap dan Olah Surat Tugas serta Administrasi Pertanggungjawaban, Bidang Geologi dan Air Tanah Dinas ESDM Provinsi Jawa Timur.">
-<meta name="theme-color" content="#1E6B70">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Crect x='1' y='1' width='40' height='40' rx='12' fill='%231E6B70'/%3E%3Cg fill='%23E9DCC0'%3E%3Ccircle cx='12' cy='13' r='6'/%3E%3Ccircle cx='25' cy='11' r='5'/%3E%3Ccircle cx='33' cy='20' r='4.5'/%3E%3Ccircle cx='19' cy='23' r='5.5'/%3E%3Ccircle cx='10' cy='29' r='5'/%3E%3Ccircle cx='29' cy='31' r='6'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#0E8A91">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(168deg,#CFE0DE,#DED8CA);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F3236}
   #app{position:fixed;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .35s}
@@ -15,24 +16,22 @@
   #splash.gone{opacity:0;pointer-events:none}
   #splash b{display:block;font-size:24px;letter-spacing:.08em;margin-top:14px}
   #splash small{display:block;margin-top:4px;color:#4B6064}
-  .lvl{animation:f 1.6s ease-in-out infinite}
-  @keyframes f{0%{transform:translateY(40px)}60%{transform:translateY(0)}100%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.lvl{animation:none}}
+  #splash img{animation:p 1.6s ease-in-out infinite}
+  @keyframes p{50%{opacity:.55}}
+  @media (prefers-reduced-motion:reduce){#splash img{animation:none}}
 </style>
 </head>
 <body>
 <div id="splash">
   <div>
-    <svg width="46" height="62" viewBox="0 0 46 62" aria-hidden="true"><defs><clipPath id="c"><path d="M23 2C23 2 3 25 3 39a20 20 0 0 0 40 0C43 25 23 2 23 2z"/></clipPath></defs>
-      <g clip-path="url(#c)"><rect width="46" height="62" fill="rgba(255,255,255,.7)"/><rect class="lvl" y="22" width="46" height="62" fill="#2C8782"/></g>
-      <path d="M23 2C23 2 3 25 3 39a20 20 0 0 0 40 0C43 25 23 2 23 2z" fill="none" stroke="#1E6B70" stroke-width="2"/></svg>
-    <b>POROSITAS</b><small>Bidang Geologi dan Air Tanah</small>
+    <img src="favicon.png" alt="Dinas ESDM Provinsi Jawa Timur" width="72" height="72">
+    <b>POROSITAS</b><small>Bidang Geologi dan Air Tanah, Dinas ESDM Provinsi Jawa Timur</small>
   </div>
 </div>
-<iframe id="app" title="POROSITAS" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+<iframe id="app" title="POROSITAS" allow="clipboard-read; clipboard-write; fullscreen; web-share"></iframe>
 <script>
   // Ganti dengan URL Web App Google Apps Script (akhiran /exec)
-  var GAS_URL = 'https://script.google.com/macros/s/AKfycbyMr_pQXTLFppX85dJK98sba0Cf2ZSodKcTSYZCpN9VVyqQdfsGNa80ytnz6Sq5YJNtSg/exec';
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbxVnMoVq_tSvRoObl80m2xztbS_YrH0OJ1m3fCtruphmtrmPNyGmpkAkTFXgeosKdKM4w/exec';
   var f = document.getElementById('app');
   f.addEventListener('load', function () {
     f.classList.add('ready');
