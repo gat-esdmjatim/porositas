@@ -10,7 +10,8 @@
   var R = null;
 
   function asalSah(o) {
-    return /^https:\/\/([a-z0-9-]+\.)*(script\.googleusercontent\.com|script\.google\.com)$/.test(String(o || ''));
+    // bingkai Apps Script: https://n-xxxx-0lu-script.googleusercontent.com (kadang dengan subdomain tambahan)
+    return /^https:\/\/([a-z0-9-]+\.)*[a-z0-9-]*script\.googleusercontent\.com$/.test(String(o || '')) || /^https:\/\/script\.google\.com$/.test(String(o || ''));
   }
   function mimeRekam() {
     if (typeof MediaRecorder === 'undefined') return '';
