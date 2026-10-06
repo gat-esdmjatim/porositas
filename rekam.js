@@ -49,8 +49,29 @@
       lama.stop();
     }
   }
+  /* Keras suara dikirim 10 kali per detik untuk gelombang di aplikasi: 0 (sunyi, -60 dB) sampai 1 (0 dB). */
+  function pengukur(r) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      r.ac = new AC();
+      var an = r.ac.createAnalyser();
+      an.fftSize = 1024;
+      r.ac.createMediaStreamSource(r.stream).connect(an);
+      var buf = new Float32Array(an.fftSize);
+      if (r.ac.state === 'suspended' && r.ac.resume) r.ac.resume();
+      r.ukur = setInterval(function () {
+        an.getFloatTimeDomainData(buf);
+        var sum = 0;
+        for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var db = 20 * Math.log10(Math.max(Math.sqrt(sum / buf.length), 1e-6));
+        kirim(r.src, r.org, { ev: 'level', v: r.jeda ? 0 : Math.max(0, Math.min(1, (db + 60) / 60)) });
+      }, 100);
+    } catch (e) { /* tanpa Web Audio: rekaman tetap jalan, gelombang tidak tampil */ }
+  }
   function bersih(r) {
     clearInterval(r.timer);
+    clearInterval(r.ukur);
+    try { if (r.ac) r.ac.close(); } catch (e) { /* abaikan */ }
     r.stream.getTracks().forEach(function (t) { t.stop(); });
     try { if (r.wake) r.wake.release(); } catch (e) { /* abaikan */ }
     if (R === r) R = null;
@@ -64,6 +85,7 @@
     }
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }).then(function (stream) {
       R = { src: src, org: org, stream: stream, mime: mime, potong: Math.max(5, Math.min(1200, potong || 600)), no: 0, jeda: false, jedaSejak: 0, berhenti: false };
+      pengukur(R);
       potonganBaru();
       R.timer = setInterval(detak, 1000);
       kunciLayar();
