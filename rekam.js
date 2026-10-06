@@ -29,25 +29,36 @@
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && R) kunciLayar(); });
   window.addEventListener('beforeunload', function (e) { if (R) { e.preventDefault(); e.returnValue = ''; } });
 
+  /*
+   * Potongan baru dimulai saat potongan berjalan sudah berisi `potong` detik audio (dihitung dari event data
+   * per detik, bukan dari timer, sehingga tetap tepat walau tab tidak aktif). Potongan lama dihentikan setelah
+   * potongan baru menerima data pertama, jadi ada tumpang tindih sekitar 1 detik dan tidak ada kata yang hilang.
+   */
   function potonganBaru() {
-    var r = R, no = ++r.no, isi = [];
-    var rec = new MediaRecorder(r.stream, { mimeType: r.mime, audioBitsPerSecond: 32000 });
-    rec.ondataavailable = function (e) { if (e.data && e.data.size) isi.push(e.data); };
+    var r = R, no = ++r.no, isi = [], detikIni = 0, lama = r.rec;
+    var rec = new MediaRecorder(r.stream, { mimeType: r.mime, audioBitsPerSecond: 64000 });
+    rec.ondataavailable = function (e) {
+      if (e.data && e.data.size) isi.push(e.data);
+      if (r.rec !== rec || r.berhenti) return;
+      if (lama) { var l = lama; lama = null; try { if (l.state !== 'inactive') l.stop(); } catch (er) { /* abaikan */ } }
+      detikIni++; r.detik++;
+      kirim(r.src, r.org, { ev: 'detik', n: r.detik });
+      if (detikIni >= r.potong && !r.jeda) potonganBaru();
+    };
     rec.onstop = function () {
       var akhir = r.berhenti && r.rec === rec;
       kirim(r.src, r.org, { ev: 'bagian', no: no, blob: new Blob(isi, { type: r.mime.split(';')[0] }), mime: r.mime, akhir: akhir });
       if (akhir) bersih(r);
     };
+    rec.onerror = function (e) { putus(r, 'Perekam berhenti karena galat (' + (e && e.error ? e.error.name : 'tidak diketahui') + ').'); };
     rec.start(1000);
-    r.rec = rec; r.potMulai = Date.now(); r.potJeda = 0;
+    r.rec = rec;
   }
-  function detak() {
-    if (!R || R.jeda || R.berhenti) return;
-    if ((Date.now() - R.potMulai - R.potJeda) / 1000 >= R.potong) {
-      var lama = R.rec;
-      potonganBaru();
-      lama.stop();
-    }
+  function putus(r, pesan) {
+    if (r.berhenti) return;
+    kirim(r.src, r.org, { ev: 'putus', pesan: pesan, akhir: true });
+    r.berhenti = true;
+    try { if (r.rec.state !== 'inactive') r.rec.stop(); else bersih(r); } catch (e) { bersih(r); }
   }
   /* Keras suara dikirim 10 kali per detik untuk gelombang di aplikasi: 0 (sunyi, -60 dB) sampai 1 (0 dB). */
   function pengukur(r) {
@@ -69,7 +80,6 @@
     } catch (e) { /* tanpa Web Audio: rekaman tetap jalan, gelombang tidak tampil */ }
   }
   function bersih(r) {
-    clearInterval(r.timer);
     clearInterval(r.ukur);
     try { if (r.ac) r.ac.close(); } catch (e) { /* abaikan */ }
     r.stream.getTracks().forEach(function (t) { t.stop(); });
@@ -83,11 +93,17 @@
       kirim(src, org, { ev: 'gagal', pesan: 'Peramban ini tidak mendukung perekaman suara. Gunakan Chrome, Edge, atau Safari terbaru.' });
       return;
     }
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }).then(function (stream) {
-      R = { src: src, org: org, stream: stream, mime: mime, potong: Math.max(5, Math.min(1200, potong || 600)), no: 0, jeda: false, jedaSejak: 0, berhenti: false };
+    // tanpa peredam gema/derau bawaan (dirancang untuk panggilan video, memotong suara peserta yang jauh dari mikrofon)
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true, channelCount: 1 } }).then(function (stream) {
+      R = { src: src, org: org, stream: stream, mime: mime, potong: Math.max(5, Math.min(1200, potong || 600)), no: 0, detik: 0, jeda: false, berhenti: false };
+      var trek = stream.getAudioTracks()[0], r0 = R;
+      if (trek) {
+        trek.onended = function () { putus(r0, 'Mikrofon terputus (perangkat dilepas atau izin dicabut). Bagian yang sudah terekam tetap diproses.'); };
+        trek.onmute = function () { kirim(r0.src, r0.org, { ev: 'senyap', on: true }); };
+        trek.onunmute = function () { kirim(r0.src, r0.org, { ev: 'senyap', on: false }); };
+      }
       pengukur(R);
       potonganBaru();
-      R.timer = setInterval(detak, 1000);
       kunciLayar();
       kirim(src, org, { ev: 'mulai', mime: mime });
     }, function (err) {
@@ -103,8 +119,8 @@
     if (d.cmd === 'cek') { kirim(e.source, e.origin, { ev: 'siap', mime: mimeRekam(), sedang: !!R }); return; }
     if (d.cmd === 'mulai') { mulai(e.source, e.origin, +d.potong); return; }
     if (!R || R.berhenti) return;
-    if (d.cmd === 'jeda' && !R.jeda) { R.rec.pause(); R.jeda = true; R.jedaSejak = Date.now(); }
-    else if (d.cmd === 'lanjut' && R.jeda) { R.rec.resume(); R.jeda = false; R.potJeda += Date.now() - R.jedaSejak; }
+    if (d.cmd === 'jeda' && !R.jeda) { R.rec.pause(); R.jeda = true; }
+    else if (d.cmd === 'lanjut' && R.jeda) { R.rec.resume(); R.jeda = false; }
     else if (d.cmd === 'selesai') {
       if (R.jeda) { R.rec.resume(); R.jeda = false; }
       R.berhenti = true;
