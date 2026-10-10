@@ -1,5 +1,5 @@
 /*
- * rekam.js : perekam rapat POROSITAS di halaman pembungkus (porositas.akuifera.id).
+ * rekam.js : perekam rapat dan pencetak PDF POROSITAS di halaman pembungkus (porositas.akuifera.id).
  * Aplikasi Apps Script berjalan di bingkai Google yang tidak meneruskan izin mikrofon,
  * jadi perekaman dilakukan di sini (halaman utama) dan setiap potongan audio dikirim
  * ke aplikasi lewat postMessage. Rekaman dipotong otomatis sesuai permintaan aplikasi
@@ -113,10 +113,28 @@
     });
   }
 
+  /* Cetak: bingkai Google tidak boleh menampilkan PDF, jadi PDF dicetak dari halaman ini lewat bingkai tersembunyi. */
+  function cetak(src, org, d) {
+    try {
+      var url = URL.createObjectURL(d.blob), fr = document.createElement('iframe');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:2px;height:2px;border:0;opacity:0';
+      fr.onload = function () {
+        setTimeout(function () {
+          try { fr.contentWindow.focus(); fr.contentWindow.print(); kirim(src, org, { ev: 'cetak-ok', kode: d.kode }); }
+          catch (er) { kirim(src, org, { ev: 'cetak-gagal', kode: d.kode, pesan: String(er && er.message) }); }
+        }, 400);
+      };
+      fr.src = url;
+      document.body.appendChild(fr);
+      setTimeout(function () { try { fr.remove(); URL.revokeObjectURL(url); } catch (er) { /* abaikan */ } }, 15 * 60 * 1000);
+    } catch (e) { kirim(src, org, { ev: 'cetak-gagal', kode: d.kode, pesan: String(e && e.message) }); }
+  }
+
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || d.porositas !== 'rekam' || !d.cmd || !asalSah(e.origin)) return;
     if (d.cmd === 'cek') { kirim(e.source, e.origin, { ev: 'siap', mime: mimeRekam(), sedang: !!R }); return; }
+    if (d.cmd === 'cetak') { cetak(e.source, e.origin, d); return; }
     if (d.cmd === 'mulai') { mulai(e.source, e.origin, +d.potong); return; }
     if (!R || R.berhenti) return;
     if (d.cmd === 'jeda' && !R.jeda) { R.rec.pause(); R.jeda = true; }
